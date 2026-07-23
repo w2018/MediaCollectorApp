@@ -1,0 +1,39 @@
+# ── Android / Gradle ──
+.gradle/
+build/
+app/build/
+local.properties
+*.iml
+.idea/
+*.apk
+*.aab
+*.jks
+*.keystore
+
+# ── PHP backend ──
+server/api/data/
+*.db
+*.db-wal
+*.db-shm
+php_error.log
+
+# ── Claude Code ──
+.claude/
+
+# ── OS ──
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# ── Internal docs ──
+完成报告.md
+优化建议报告.md
+开发功能说明书.md
+android-app-plan.md
+mqtt-chat-design.md
+
+# ── Others ──
+.env
+*.log

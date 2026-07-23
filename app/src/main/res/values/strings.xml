@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">媒体采集</string>
+    <string name="tab_media">媒体</string>
+    <string name="tab_download">下载</string>
+    <string name="tab_favorites">收藏</string>
+    <string name="tab_history">历史</string>
+    <string name="tab_profile">我的</string>
+    <string name="tab_chat">聊天</string>
+</resources>
