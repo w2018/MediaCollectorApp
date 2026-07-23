@@ -4,11 +4,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -58,6 +59,47 @@ fun MediaDetailScreen(
                         contentScale = ContentScale.FillWidth,
                         modifier = Modifier.fillMaxWidth()
                     )
+
+                    // ── 操作栏 ──
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            // 收藏
+                            IconButton(onClick = { viewModel.toggleFavorite() }) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(
+                                        if (state.isFavorite) Icons.Default.Favorite
+                                        else Icons.Default.FavoriteBorder,
+                                        "收藏",
+                                        tint = if (state.isFavorite) Color(0xFFFF4081)
+                                        else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text("收藏", style = MaterialTheme.typography.labelSmall)
+                                }
+                            }
+                            // 分享
+                            IconButton(onClick = { viewModel.shareImage() }) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(Icons.Default.Share, "分享", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("分享", style = MaterialTheme.typography.labelSmall)
+                                }
+                            }
+                            // 下载
+                            IconButton(onClick = { viewModel.downloadMedia() }) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(Icons.Default.Download, "下载", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("下载", style = MaterialTheme.typography.labelSmall)
+                                }
+                            }
+                        }
+                    }
 
                     if (detail.type == "video") {
                         Button(

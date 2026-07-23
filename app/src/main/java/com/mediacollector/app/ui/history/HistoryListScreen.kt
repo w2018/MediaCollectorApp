@@ -18,9 +18,10 @@ import com.mediacollector.app.ui.common.EmptyState
 import com.mediacollector.app.ui.common.ErrorState
 import com.mediacollector.app.ui.common.LoadingIndicator
 import com.mediacollector.app.ui.common.SwipeToDeleteItem
+import com.mediacollector.app.ui.photo.BrowsingContext
 import com.mediacollector.app.util.DateUtils
 
-/** 浏览历史页面 */
+/** 浏览历史页面（支持图片/视频分类切换） */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryListScreen(
@@ -29,6 +30,9 @@ fun HistoryListScreen(
 ) {
     val state by viewModel.state.collectAsState()
     var showClearDialog by remember { mutableStateOf(false) }
+
+    // 每次页面可见时刷新
+    LaunchedEffect(Unit) { viewModel.loadHistory() }
 
     Scaffold(
         topBar = {
@@ -44,46 +48,74 @@ fun HistoryListScreen(
             )
         }
     ) { padding ->
-        when {
-            state.isLoading && state.items.isEmpty() -> LoadingIndicator()
-            state.error != null && state.items.isEmpty() -> ErrorState(
-                state.error!!, onRetry = { viewModel.loadHistory() }
-            )
-            state.items.isEmpty() -> EmptyState(
-                message = "还没有浏览记录",
-                icon = "🕐"
-            )
-            else -> {
-                // 按日期分组
-                val grouped = state.items.groupBy { record ->
-                    com.mediacollector.app.util.DateUtils.fromDbString(record.watchedAt)
-                        .let { DateUtils.groupDate(it) }
-                }
-
-                LazyColumn(
-                    modifier = Modifier.padding(padding),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+        Column(modifier = Modifier.padding(padding)) {
+            // 分类选项卡
+            if (state.items.isNotEmpty()) {
+                TabRow(
+                    selectedTabIndex = when (state.filterType) {
+                        "photo" -> 1
+                        "video" -> 2
+                        else -> 0
+                    }
                 ) {
-                    grouped.forEach { (date, records) ->
-                        item {
-                            Text(
-                                date,
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
-                        }
-                        items(records, key = { it.mediaId }) { record ->
-                            SwipeToDeleteItem(
-                                onDelete = { viewModel.removeHistory(record.mediaId) }
-                            ) {
-                                HistoryItem(
-                                    record = record,
-                                    onClick = {
-                                        onMediaClick(record.mediaId, record.mediaType)
-                                    }
+                    Tab(
+                        selected = state.filterType == "all",
+                        onClick = { viewModel.setFilter("all") },
+                        text = { Text("全部 (${state.items.size})") }
+                    )
+                    Tab(
+                        selected = state.filterType == "photo",
+                        onClick = { viewModel.setFilter("photo") },
+                        text = { Text("图片") }
+                    )
+                    Tab(
+                        selected = state.filterType == "video",
+                        onClick = { viewModel.setFilter("video") },
+                        text = { Text("视频") }
+                    )
+                }
+            }
+
+            when {
+                state.isLoading && state.items.isEmpty() -> LoadingIndicator()
+                state.error != null && state.items.isEmpty() -> ErrorState(
+                    state.error!!, onRetry = { viewModel.loadHistory() }
+                )
+                state.filteredItems.isEmpty() && state.items.isNotEmpty() ->
+                    EmptyState("当前分类没有记录", "🕐")
+                state.filteredItems.isEmpty() ->
+                    EmptyState("还没有浏览记录", "🕐")
+                else -> {
+                    val grouped = state.filteredItems.groupBy { record ->
+                        DateUtils.fromDbString(record.watchedAt)
+                            .let { DateUtils.groupDate(it) }
+                    }
+
+                    LazyColumn(
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        grouped.forEach { (date, records) ->
+                            item {
+                                Text(
+                                    date,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(vertical = 8.dp)
                                 )
+                            }
+                            items(records, key = { it.mediaId }) { record ->
+                                SwipeToDeleteItem(
+                                    onDelete = { viewModel.removeHistory(record.mediaId) }
+                                ) {
+                                    HistoryItem(
+                                        record = record,
+                                        onClick = {
+                                            BrowsingContext.mediaIds = state.filteredItems.map { it.mediaId }
+                                            onMediaClick(record.mediaId, record.mediaType)
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
@@ -92,7 +124,6 @@ fun HistoryListScreen(
         }
     }
 
-    // 清空确认弹窗
     if (showClearDialog) {
         AlertDialog(
             onDismissRequest = { showClearDialog = false },
@@ -153,7 +184,6 @@ private fun HistoryItem(
                 )
             }
 
-            // 类型标签
             if (record.mediaType == "video") {
                 AssistChip(
                     onClick = {},

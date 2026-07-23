@@ -12,9 +12,8 @@ import javax.inject.Singleton
 /**
  * 服务器 URL 动态提供器
  *
- * 异步从 DataStore 加载已保存的 URL，缓存到内存中，
- * 提供同步访问方法供拦截器使用。
- * 修改 URL 后立即生效，无需重启应用。
+ * 保存用户自定义的 API 服务器地址，提供同步访问方法供拦截器使用。
+ * 支持用户输入任意格式的 URL，自动解析各组成部分。
  */
 @Singleton
 class ServerUrlProvider @Inject constructor(
@@ -22,7 +21,7 @@ class ServerUrlProvider @Inject constructor(
 ) {
     companion object {
         private const val TAG = "ServerUrlProvider"
-        private const val DEFAULT_URL = "http://192.168.1.100/media-api/"
+        private const val DEFAULT_URL = "http://localhost/media-api/"
     }
 
     @Volatile
@@ -37,6 +36,11 @@ class ServerUrlProvider @Inject constructor(
     var port: Int = 80
         private set
 
+    /** 用户 URL 中的路径部分（如 /media-api、/api/v1、空字符串等） */
+    @Volatile
+    var basePath: String = "/media-api"
+        private set
+
     @Volatile
     var currentUrl: String = DEFAULT_URL
         private set
@@ -44,7 +48,6 @@ class ServerUrlProvider @Inject constructor(
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     init {
-        // 异步监听 DataStore 变化，及时更新缓存
         scope.launch {
             settingsStore.serverUrl.collect { savedUrl ->
                 if (savedUrl.isNotBlank()) {
@@ -80,12 +83,18 @@ class ServerUrlProvider @Inject constructor(
             scheme = httpUrl.scheme
             host = httpUrl.host
             port = httpUrl.port
-            Log.d(TAG, "URL 已更新: $scheme://$host:$port")
+
+            // 提取路径部分，去掉末尾的 /
+            val rawPath = httpUrl.encodedPath
+            basePath = rawPath.trimEnd('/').let { if (it.isEmpty()) "" else it }
+
+            Log.d(TAG, "URL 已更新: $scheme://$host:$port, basePath=$basePath")
         } catch (e: Exception) {
             Log.w(TAG, "URL 解析失败: ${e.message}, 使用默认值")
             scheme = "http"
             host = "192.168.1.100"
             port = 80
+            basePath = "/media-api"
         }
     }
 }

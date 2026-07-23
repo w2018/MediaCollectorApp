@@ -1,6 +1,9 @@
 package com.mediacollector.app.ui.download
 
+import android.app.Application
+import android.content.Intent
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,33 +29,42 @@ data class DownloadUiState(
 )
 
 @HiltViewModel
-class DownloadViewModel @Inject constructor() : ViewModel() {
+class DownloadViewModel @Inject constructor(
+    private val application: Application
+) : ViewModel() {
 
-    private val _state = MutableStateFlow(DownloadUiState())
-    val state: StateFlow<DownloadUiState> = _state.asStateFlow()
+    /** 从全局 DownloadTracker 获取实时下载状态 */
+    val state: StateFlow<List<DownloadItem>> = DownloadTracker.downloads
 
     fun startDownload(mediaId: Int, title: String, url: String) {
-        val existing = _state.value.downloadingItems.find { it.mediaId == mediaId }
-        if (existing != null && existing.status == DownloadStatus.DOWNLOADING) return
+        // 避免重复下载
+        val current = DownloadTracker.downloads.value
+        if (current.any { it.mediaId == mediaId }) return
 
-        val item = DownloadItem(mediaId, title, url, status = DownloadStatus.DOWNLOADING)
-        _state.value = _state.value.copy(
-            downloadingItems = _state.value.downloadingItems + item
-        )
+        // 写入全局跟踪器
+        DownloadTracker.addDownload(mediaId, title, url)
 
-        // TODO: 启动 DownloadService
-        // 实际调用: startForegroundService with DownloadService
+        // 启动前台下载服务
+        val intent = Intent(application, DownloadService::class.java).apply {
+            action = DownloadService.ACTION_DOWNLOAD
+            putExtra(DownloadService.EXTRA_URL, url)
+            putExtra(DownloadService.EXTRA_FILENAME, sanitizeFileName(title))
+            putExtra(DownloadService.EXTRA_MEDIA_ID, mediaId)
+        }
+        application.startForegroundService(intent)
     }
 
     fun cancelDownload(mediaId: Int) {
-        _state.value = _state.value.copy(
-            downloadingItems = _state.value.downloadingItems.filter { it.mediaId != mediaId }
-        )
+        DownloadTracker.removeDownload(mediaId)
     }
 
     fun deleteDownloaded(mediaId: Int) {
-        _state.value = _state.value.copy(
-            completedItems = _state.value.completedItems.filter { it.mediaId != mediaId }
-        )
+        DownloadTracker.removeDownload(mediaId)
+    }
+
+    private fun sanitizeFileName(title: String): String {
+        return title.replace(Regex("[/\\\\:*?\"<>|]"), "_")
+            .take(80)
+            .ifEmpty { "download_${System.currentTimeMillis()}" }
     }
 }

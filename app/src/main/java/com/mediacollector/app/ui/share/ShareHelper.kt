@@ -4,10 +4,9 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.core.content.FileProvider
-import coil3.ImageLoader
-import coil3.request.ImageRequest
-import coil3.request.SuccessResult
 import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
 
 /**
  * 图片分享助手
@@ -17,62 +16,59 @@ import java.io.File
 object ShareHelper {
 
     /**
-     * 分享图片
+     * 分享图片（挂起函数，需要在协程中调用）
      *
      * @param context 上下文
-     * @param imageLoader Coil ImageLoader
      * @param imageUrl 图片 URL
-     * @param fileName 文件名（不含扩展名）
-     * @param onComplete 分享完成回调（用于清理）
+     * @return true 分享成功
      */
-    fun shareImage(
+    suspend fun shareImage(
         context: Context,
-        imageLoader: ImageLoader,
-        imageUrl: String,
-        fileName: String = "share_${System.currentTimeMillis()}"
-    ) {
-        // 创建临时目录
-        val sharedDir = File(context.cacheDir, "shared")
-        sharedDir.mkdirs()
+        imageUrl: String
+    ): Boolean {
+        return try {
+            // 创建临时目录
+            val sharedDir = File(context.cacheDir, "shared")
+            sharedDir.mkdirs()
+            val outputFile = File(sharedDir, "share_${System.currentTimeMillis()}.jpg")
 
-        // 下载图片到临时文件
-        val outputFile = File(sharedDir, "$fileName.jpg")
-
-        // 使用 Coil 下载
-        val request = ImageRequest.Builder(context)
-            .data(imageUrl)
-            .build()
-
-        // 同步下载
-        kotlinx.coroutines.runBlocking {
-            val result = imageLoader.execute(request)
-            if (result is SuccessResult) {
-                // 将图片数据写入临时文件
-                result.image
-                // 实际项目中需从 result 提取图片数据写入 outputFile
+            // 下载图片到临时文件
+            val url = URL(imageUrl)
+            val connection = url.openConnection() as HttpURLConnection
+            connection.connectTimeout = 10000
+            connection.readTimeout = 15000
+            connection.instanceFollowRedirects = true
+            connection.inputStream.use { input ->
+                outputFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
             }
+            connection.disconnect()
+
+            // 创建 FileProvider URI
+            val uri: Uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                outputFile
+            )
+
+            // 创建分享 Intent
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "image/jpeg"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+
+            // 启动分享（非 Activity 上下文需要 NEW_TASK flag）
+            context.startActivity(Intent.createChooser(shareIntent, "分享图片").apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            })
+            outputFile.deleteOnExit()
+            true
+        } catch (_: Exception) {
+            false
         }
-
-        // 创建 FileProvider URI
-        val uri: Uri = FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            outputFile
-        )
-
-        // 创建分享 Intent
-        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-            type = "image/jpeg"
-            putExtra(Intent.EXTRA_STREAM, uri)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-
-        // 启动分享
-        context.startActivity(Intent.createChooser(shareIntent, "分享图片"))
-
-        // 注册分享完成回调（在 Activity 的 onActivityResult 中清理）
-        // 或使用 File.deleteOnExit()
-        outputFile.deleteOnExit()
     }
 
     /**

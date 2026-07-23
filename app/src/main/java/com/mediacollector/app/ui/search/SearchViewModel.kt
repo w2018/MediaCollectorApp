@@ -16,9 +16,14 @@ import javax.inject.Inject
 data class SearchUiState(
     val query: String = "",
     val results: List<MediaItem> = emptyList(),
+    val filteredResults: List<MediaItem> = emptyList(),
     val isLoading: Boolean = false,
+    val isLoadingMore: Boolean = false,
     val error: String? = null,
-    val hasSearched: Boolean = false
+    val hasSearched: Boolean = false,
+    val currentPage: Int = 1,
+    val totalPages: Int = 1,
+    val filterType: String = "all" // all / photo / video
 )
 
 @HiltViewModel
@@ -36,19 +41,22 @@ class SearchViewModel @Inject constructor(
         searchJob?.cancel()
 
         if (query.isBlank()) {
-            _state.value = _state.value.copy(results = emptyList(), hasSearched = false)
+            _state.value = _state.value.copy(results = emptyList(), filteredResults = emptyList(), hasSearched = false)
             return
         }
 
         searchJob = viewModelScope.launch {
             delay(300) // 防抖
             _state.value = _state.value.copy(isLoading = true, error = null)
-            mediaRepository.search(query).fold(
+            mediaRepository.search(query, page = 1, pageSize = 50).fold(
                 onSuccess = { result ->
                     _state.value = _state.value.copy(
                         results = result.results,
+                        filteredResults = filterByType(result.results, _state.value.filterType),
                         isLoading = false,
-                        hasSearched = true
+                        hasSearched = true,
+                        currentPage = result.pagination.page,
+                        totalPages = result.pagination.totalPages
                     )
                 },
                 onFailure = { e ->
@@ -62,8 +70,47 @@ class SearchViewModel @Inject constructor(
         }
     }
 
+    fun loadMore() {
+        val current = _state.value
+        if (current.isLoadingMore || current.currentPage >= current.totalPages) return
+
+        viewModelScope.launch {
+            _state.value = current.copy(isLoadingMore = true)
+            mediaRepository.search(current.query, page = current.currentPage + 1, pageSize = 50).fold(
+                onSuccess = { result ->
+                    _state.value = _state.value.copy(
+                        results = _state.value.results + result.results,
+                        filteredResults = filterByType(
+                            _state.value.results + result.results,
+                            _state.value.filterType
+                        ),
+                        isLoadingMore = false,
+                        currentPage = result.pagination.page,
+                        totalPages = result.pagination.totalPages
+                    )
+                },
+                onFailure = { _state.value = _state.value.copy(isLoadingMore = false) }
+            )
+        }
+    }
+
+    fun setFilter(type: String) {
+        _state.value = _state.value.copy(
+            filterType = type,
+            filteredResults = filterByType(_state.value.results, type)
+        )
+    }
+
     fun clearSearch() {
         searchJob?.cancel()
         _state.value = SearchUiState()
+    }
+
+    private fun filterByType(items: List<MediaItem>, type: String): List<MediaItem> {
+        return when (type) {
+            "photo" -> items.filter { it.type == "photo" }
+            "video" -> items.filter { it.type == "video" }
+            else -> items
+        }
     }
 }

@@ -59,7 +59,7 @@ object NetworkModule {
     ): Retrofit {
         // 使用默认 URL，实际主机地址由 ServerUrlInterceptor 动态重写
         return Retrofit.Builder()
-            .baseUrl("http://192.168.1.100/media-api/")
+            .baseUrl("http://localhost/media-api/")
             .client(okHttpClient)
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()

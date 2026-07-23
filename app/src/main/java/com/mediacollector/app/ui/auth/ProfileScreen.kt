@@ -20,6 +20,7 @@ fun ProfileScreen(
     onNavigateToRegister: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToCacheManage: () -> Unit,
+    onNavigateToAbout: () -> Unit,
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -149,7 +150,7 @@ fun ProfileScreen(
 
             SettingsMenuItem(Icons.Default.Settings, "设置", onClick = onNavigateToSettings)
             SettingsMenuItem(Icons.Default.Storage, "缓存管理", onClick = onNavigateToCacheManage)
-            SettingsMenuItem(Icons.Default.Info, "关于", onClick = { /* TODO */ })
+            SettingsMenuItem(Icons.Default.Info, "关于", onClick = onNavigateToAbout)
         }
     }
 
@@ -158,7 +159,7 @@ fun ProfileScreen(
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
             title = { Text("退出登录") },
-            text = { Text("确定要退出登录吗？退出后本地收藏和历史记录将被保留。") },
+            text = { Text("确定要退出登录吗？退出后本地收藏、历史记录和聊天记录将被清空，下次登录时自动从服务端恢复。") },
             confirmButton = {
                 TextButton(onClick = {
                     showLogoutDialog = false

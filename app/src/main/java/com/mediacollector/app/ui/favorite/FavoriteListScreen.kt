@@ -15,12 +15,12 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
 import com.mediacollector.app.ui.common.EmptyState
+import com.mediacollector.app.ui.photo.BrowsingContext
 import com.mediacollector.app.ui.common.ErrorState
 import com.mediacollector.app.ui.common.LoadingIndicator
 import com.mediacollector.app.ui.common.SwipeToDeleteItem
-import com.mediacollector.app.util.DateUtils
 
-/** 收藏列表页面 */
+/** 收藏列表页面（支持图片/视频分类切换） */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FavoriteListScreen(
@@ -29,34 +29,72 @@ fun FavoriteListScreen(
 ) {
     val state by viewModel.state.collectAsState()
 
+    // 每次页面可见时刷新
+    LaunchedEffect(Unit) { viewModel.loadFavorites() }
+
     Scaffold(
         topBar = {
             TopAppBar(title = { Text("我的收藏") })
         }
     ) { padding ->
-        when {
-            state.isLoading && state.items.isEmpty() -> LoadingIndicator()
-            state.error != null && state.items.isEmpty() -> ErrorState(
-                state.error!!, onRetry = { viewModel.loadFavorites() }
-            )
-            state.items.isEmpty() -> EmptyState(
-                message = "还没有收藏",
-                icon = "❤️"
-            )
-            else -> {
-                LazyColumn(
-                    modifier = Modifier.padding(padding),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(state.items, key = { it.id }) { media ->
-                        SwipeToDeleteItem(
-                            onDelete = { viewModel.removeFavorite(media.id) }
-                        ) {
-                            FavoriteItem(
-                                media = media,
-                                onClick = { onMediaClick(media.id, media.type) }
-                            )
+        Column(modifier = Modifier.padding(padding)) {
+            // 分类选项卡
+            TabRow(
+                selectedTabIndex = when (state.filterType) {
+                    "photo" -> 1
+                    "video" -> 2
+                    else -> 0
+                }
+            ) {
+                Tab(
+                    selected = state.filterType == "all",
+                    onClick = { viewModel.setFilter("all") },
+                    text = { Text("全部 (${state.items.size})") }
+                )
+                Tab(
+                    selected = state.filterType == "photo",
+                    onClick = { viewModel.setFilter("photo") },
+                    text = { Text("图片") }
+                )
+                Tab(
+                    selected = state.filterType == "video",
+                    onClick = { viewModel.setFilter("video") },
+                    text = { Text("视频") }
+                )
+            }
+
+            // 列表内容
+            when {
+                state.isLoading && state.items.isEmpty() -> LoadingIndicator()
+                state.error != null && state.items.isEmpty() -> ErrorState(
+                    state.error!!, onRetry = { viewModel.loadFavorites() }
+                )
+                state.filteredItems.isEmpty() -> EmptyState(
+                    message = when (state.filterType) {
+                        "photo" -> "还没有收藏的图片"
+                        "video" -> "还没有收藏的视频"
+                        else -> "还没有收藏"
+                    },
+                    icon = "❤️"
+                )
+                else -> {
+                    LazyColumn(
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(state.filteredItems, key = { it.id }) { media ->
+                            SwipeToDeleteItem(
+                                onDelete = { viewModel.removeFavorite(media.id) }
+                            ) {
+                                FavoriteItem(
+                                    media = media,
+                                    onClick = {
+                                        // 设置浏览上下文，使全屏查看器能左右滑动切换
+                                        BrowsingContext.mediaIds = state.filteredItems.map { it.id }
+                                        onMediaClick(media.id, media.type)
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -99,11 +137,27 @@ private fun FavoriteItem(
                     maxLines = 1
                 )
                 Spacer(Modifier.height(4.dp))
-                Text(
-                    media.author.ifEmpty { "未知作者" },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Row {
+                    Text(
+                        media.author.ifEmpty { "未知作者" },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    // 类型标签
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = if (media.type == "video")
+                            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f)
+                        else MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
+                    ) {
+                        Text(
+                            if (media.type == "video") "视频" else "图片",
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
             }
 
             // 收藏图标

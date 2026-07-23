@@ -19,7 +19,9 @@ import com.mediacollector.app.ui.common.EmptyState
 fun DownloadManageScreen(
     viewModel: DownloadViewModel = hiltViewModel()
 ) {
-    val state by viewModel.state.collectAsState()
+    val allItems by viewModel.state.collectAsState()
+    val downloadingItems = allItems.filter { it.status == DownloadStatus.DOWNLOADING || it.status == DownloadStatus.PENDING }
+    val completedItems = allItems.filter { it.status == DownloadStatus.COMPLETED }
 
     Scaffold(
         topBar = {
@@ -43,14 +45,14 @@ fun DownloadManageScreen(
 
             when (selectedTab) {
                 0 -> { // 下载中
-                    if (state.downloadingItems.isEmpty()) {
+                    if (downloadingItems.isEmpty()) {
                         EmptyState("没有正在下载的任务", "📥")
                     } else {
                         LazyColumn(
                             contentPadding = PaddingValues(16.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            items(state.downloadingItems) { item ->
+                            items(downloadingItems, key = { it.mediaId }) { item ->
                                 DownloadingItem(
                                     item = item,
                                     onCancel = { viewModel.cancelDownload(item.mediaId) }
@@ -60,14 +62,14 @@ fun DownloadManageScreen(
                     }
                 }
                 1 -> { // 已完成
-                    if (state.completedItems.isEmpty()) {
+                    if (completedItems.isEmpty()) {
                         EmptyState("还没有下载完成的内容", "✅")
                     } else {
                         LazyColumn(
                             contentPadding = PaddingValues(16.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            items(state.completedItems) { item ->
+                            items(completedItems, key = { it.mediaId }) { item ->
                                 CompletedItem(
                                     item = item,
                                     onDelete = { viewModel.deleteDownloaded(item.mediaId) }

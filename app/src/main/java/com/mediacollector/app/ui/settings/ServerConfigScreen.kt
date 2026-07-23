@@ -53,7 +53,7 @@ fun ServerConfigScreen(
             OutlinedTextField(
                 value = url,
                 onValueChange = { url = it },
-                placeholder = { Text("http://192.168.1.100/media-api/") },
+                placeholder = { Text("http://localhost/media-api/") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )

@@ -136,18 +136,24 @@ data class ChatHeartbeatRequest(
 
 @Serializable
 data class ChatOnlineResponse(
-    val data: ChatOnlineData
+    val data: OnlineUsersData
 )
 
 @Serializable
-data class ChatOnlineData(
-    val onlineUsers: List<OnlineUser> = emptyList(),
-    @SerialName("online_count") val onlineCount: Int = 0
+data class OnlineCountData(
+    val count: Int = 0
+)
+
+@Serializable
+data class OnlineUsersData(
+    val count: Int = 0,
+    val users: List<OnlineUser> = emptyList()
 )
 
 @Serializable
 data class OnlineUser(
     val username: String,
     @SerialName("display_name") val displayName: String,
-    @SerialName("room_id") val roomId: String = ""
+    @SerialName("room_id") val roomId: String = "",
+    @SerialName("last_heartbeat") val lastHeartbeat: String = ""
 )

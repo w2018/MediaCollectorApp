@@ -36,6 +36,7 @@ class ChatViewModel @Inject constructor(
 
     private var heartbeatJob: Job? = null
     private var onlinePollJob: Job? = null
+    private var messagePollJob: Job? = null
 
     init {
         loadUserInfo()
@@ -60,8 +61,11 @@ class ChatViewModel @Inject constructor(
             // 连接 MQTT
             if (isLoggedIn) {
                 connectMqtt()
+                // 从服务端拉取历史消息
+                loadRemoteMessages()
                 startHeartbeat()
                 startOnlinePolling()
+                startMessagePolling()
             }
         }
     }
@@ -142,6 +146,30 @@ class ChatViewModel @Inject constructor(
     fun sendImage(imageUrl: String) {
         val s = _state.value
         mqttManager.sendImageMessage(imageUrl, s.username, s.displayName, s.currentRoomId)
+    }
+
+    /** 从服务端拉取历史消息并合并到本地 */
+    private fun loadRemoteMessages() {
+        viewModelScope.launch {
+            val s = _state.value
+            val result = chatRepository.getRemoteMessages(s.currentRoomId)
+            result.onSuccess { paginated ->
+                val entities = paginated.items.map { dto ->
+                    ChatMessageEntity(
+                        message_id = dto.messageId,
+                        room_id = dto.roomId,
+                        sender_user = dto.senderUser,
+                        sender_name = dto.senderName,
+                        type = dto.type,
+                        content = dto.content,
+                        timestamp = dto.timestamp
+                    )
+                }
+                if (entities.isNotEmpty()) {
+                    chatRepository.saveMessages(entities)
+                }
+            }
+        }
     }
 
     fun changeRoom(roomId: String) {
@@ -256,14 +284,30 @@ class ChatViewModel @Inject constructor(
         }
     }
 
+    /** 定时轮询服务端消息（确保即使 MQTT 断开也能同步） */
+    private fun startMessagePolling() {
+        messagePollJob?.cancel()
+        messagePollJob = viewModelScope.launch {
+            while (isActive) {
+                delay(30_000) // 每 30 秒
+                val s = _state.value
+                if (s.isLoggedIn) {
+                    loadRemoteMessages()
+                }
+            }
+        }
+    }
+
     /** 退出登录时清除聊天数据 */
     fun onLogout() {
         viewModelScope.launch {
             mqttManager.disconnect()
+            // 不清除服务端消息，以便下次登录能恢复聊天记录
+            // 只清本地缓存，下次登录会从 API 重新拉取
             chatRepository.clearAllLocalMessages()
-            chatRepository.clearRemoteMessages()
             heartbeatJob?.cancel()
             onlinePollJob?.cancel()
+            messagePollJob?.cancel()
             _state.value = ChatUiState()
         }
     }
@@ -273,5 +317,6 @@ class ChatViewModel @Inject constructor(
         mqttManager.destroy()
         heartbeatJob?.cancel()
         onlinePollJob?.cancel()
+        messagePollJob?.cancel()
     }
 }

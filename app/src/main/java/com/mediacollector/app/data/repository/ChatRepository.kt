@@ -61,14 +61,14 @@ class ChatRepository @Inject constructor(
     /** 在线用户 */
     suspend fun getOnlineUsers(roomId: String): Result<List<OnlineUser>> = runCatching {
         val response = chatApi.getOnlineUsers(roomId)
-        if (response.success && response.data != null) response.data
+        if (response.success && response.data != null) response.data.users
         else throw Exception(response.message)
     }
 
     /** 在线人数 */
     suspend fun getOnlineCount(roomId: String): Result<Int> = runCatching {
         val response = chatApi.getOnlineCount(roomId)
-        if (response.success && response.data != null) response.data
+        if (response.success && response.data != null) response.data.count
         else throw Exception(response.message)
     }
 

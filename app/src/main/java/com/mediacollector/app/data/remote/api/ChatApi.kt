@@ -27,10 +27,10 @@ interface ChatApi {
     @GET("api/v1/chat/online")
     suspend fun getOnlineUsers(
         @Query("room_id") roomId: String = "lobby"
-    ): ApiResponse<List<OnlineUser>>
+    ): ApiResponse<OnlineUsersData>
 
     @GET("api/v1/chat/online/count")
     suspend fun getOnlineCount(
         @Query("room_id") roomId: String = "lobby"
-    ): ApiResponse<Int>
+    ): ApiResponse<OnlineCountData>
 }

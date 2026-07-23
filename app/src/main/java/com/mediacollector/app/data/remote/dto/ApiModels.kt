@@ -26,7 +26,7 @@ data class ApiListResponse<T>(
 @Serializable
 data class PaginatedData<T>(
     val items: List<T>,
-    val pagination: Pagination
+    val pagination: Pagination? = null
 )
 
 @Serializable
@@ -85,7 +85,7 @@ data class MediaDetail(
     val duration: Int = 0,
     @SerialName("file_size") val fileSize: Long = 0,
     @SerialName("mime_type") val mimeType: String = "",
-    @SerialName("is_favorite") val isFavorite: Boolean = false,
+    @SerialName("is_favorite") val isFavorite: Int = 0,
     val tags: List<MediaTag> = emptyList(),
     val exif: ExifData? = null,
     @SerialName("created_at") val createdAt: String = "",

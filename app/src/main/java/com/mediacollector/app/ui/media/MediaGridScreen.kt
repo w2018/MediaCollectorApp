@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Collections
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -37,6 +38,9 @@ fun MediaGridScreen(
             TopAppBar(
                 title = { Text("媒体") },
                 actions = {
+                    IconButton(onClick = { viewModel.refresh() }) {
+                        Icon(Icons.Default.Refresh, contentDescription = "刷新")
+                    }
                     IconButton(onClick = onCollectionsClick) {
                         Icon(Icons.Default.Collections, contentDescription = "集合")
                     }
@@ -76,7 +80,9 @@ fun MediaGridScreen(
                         items(state.items, key = { it.id }) { media ->
                             MediaCard(
                                 media = media,
-                                onClick = { onMediaClick(media.id, media.type) }
+                                onClick = { onMediaClick(media.id, media.type) },
+                                isFavorite = state.favorites[media.id] ?: false,
+                                onFavoriteClick = { viewModel.toggleFavorite(media.id, state.favorites[media.id] ?: false) }
                             )
                         }
 

@@ -197,14 +197,13 @@ private fun ChatBubble(
                 horizontalAlignment = if (isMe) Alignment.End else Alignment.Start
             ) {
                 // 发送者名字
-                if (!isMe) {
-                    Text(
-                        message.senderName,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
-                    )
-                }
+                Text(
+                    message.senderName,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (isMe) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
+                )
                 Surface(
                     shape = RoundedCornerShape(
                         topStart = 16.dp,
@@ -241,13 +240,13 @@ private fun ChatBubble(
                     .padding(vertical = 2.dp),
                 horizontalAlignment = if (isMe) Alignment.End else Alignment.Start
             ) {
-                if (!isMe) {
-                    Text(
-                        message.senderName,
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
-                    )
-                }
+                Text(
+                    message.senderName,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (isMe) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
+                )
                 Surface(
                     shape = RoundedCornerShape(12.dp),
                     color = if (isMe) MaterialTheme.colorScheme.primary

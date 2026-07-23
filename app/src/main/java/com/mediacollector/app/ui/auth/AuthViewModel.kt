@@ -2,14 +2,17 @@ package com.mediacollector.app.ui.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mediacollector.app.data.local.dao.MediaDao
 import com.mediacollector.app.data.repository.AuthRepository
 import com.mediacollector.app.data.settings.AuthStore
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 data class AuthUiState(
@@ -27,7 +30,8 @@ data class AuthUiState(
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val authStore: AuthStore
+    private val authStore: AuthStore,
+    private val mediaDao: MediaDao
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AuthUiState())
@@ -116,8 +120,18 @@ class AuthViewModel @Inject constructor(
 
     fun logout() {
         viewModelScope.launch {
+            // 先尝试调用服务端退出（忽略失败）
             authRepository.logout()
+            // 清除本地认证信息
             authStore.clear()
+
+            // 清空本地 Room 数据（NonCancellable 确保 ViewModel 销毁时不会被中断）
+            withContext(NonCancellable) {
+                try { mediaDao.clearAllFavorites() } catch (_: Exception) { }
+                try { mediaDao.clearAllHistory() } catch (_: Exception) { }
+                try { mediaDao.clearAllChatMessages() } catch (_: Exception) { }
+            }
+
             _state.value = AuthUiState()
         }
     }

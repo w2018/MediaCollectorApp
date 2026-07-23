@@ -117,7 +117,8 @@ fun MainApp() {
                     onNavigateToLogin = { navController.navigate(Routes.Login.route) },
                     onNavigateToRegister = { navController.navigate(Routes.Register.route) },
                     onNavigateToSettings = { navController.navigate(Routes.Settings.route) },
-                    onNavigateToCacheManage = { navController.navigate(Routes.CacheManage.route) }
+                    onNavigateToCacheManage = { navController.navigate(Routes.CacheManage.route) },
+                    onNavigateToAbout = { navController.navigate(Routes.About.route) }
                 )
             }
 

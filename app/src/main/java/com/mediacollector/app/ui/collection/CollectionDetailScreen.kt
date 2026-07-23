@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mediacollector.app.ui.common.LoadingIndicator
 import com.mediacollector.app.ui.media.components.MediaCard
+import com.mediacollector.app.ui.photo.BrowsingContext
 
 /** 集合详情页面 */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -59,7 +60,10 @@ fun CollectionDetailScreen(
                     items(state.media, key = { it.id }) { media ->
                         MediaCard(
                             media = media,
-                            onClick = { onMediaClick(media.id, media.type) }
+                            onClick = {
+                                BrowsingContext.mediaIds = state.media.map { it.id }
+                                onMediaClick(media.id, media.type)
+                            }
                         )
                     }
                 }
