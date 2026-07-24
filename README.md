@@ -5,8 +5,6 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 > 一款基于 PHP + Android 的媒体采集与管理工具。
->
-> 作者：**曾先生**（w2018）
 
 ---
 
@@ -180,13 +178,6 @@ GET /media-api/route.php?_url=/api/v1/search&keyword=xxx
 ## 📄 开源协议
 
 本项目基于 **MIT 协议** 开源。
-
-## 👤 作者
-
-**曾先生**（w2018）
-
-- GitHub: [https://github.com/w2018](https://github.com/w2018)
-- 项目地址: [https://github.com/w2018/MediaCollectorApp](https://github.com/w2018/MediaCollectorApp)
 
 ## ⭐ 贡献
 
